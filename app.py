@@ -1,6 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 from duckduckgo_search import DDGS
+from openai import OpenAI
 import time
 
 # --- Page Configuration ---
@@ -45,12 +46,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- Logic: Search & Summarize ---
-def research_drug(drug_name, api_key, model_name):
+def research_drug(drug_name, api_key, provider, model_name):
     """
-    Searches DuckDuckGo for the drug and uses Gemini to summarize.
+    Searches DuckDuckGo for the drug and uses the selected AI provider to summarize.
     """
-    if not api_key or "YOUR_GEMINI_API_KEY" in api_key:
-        return "⚠️ Please configure your Google Gemini API Key in .streamlit/secrets.toml or the sidebar."
+    if not api_key or "YOUR_" in api_key:
+        return f"⚠️ Please configure your {provider} API Key in .streamlit/secrets.toml or the sidebar."
 
     try:
         # 1. Search Web
@@ -63,12 +64,10 @@ def research_drug(drug_name, api_key, model_name):
             
             search_context = "\n\n".join([f"Source: {r['title']}\nSnippet: {r['body']}\nLink: {r['href']}" for r in results])
 
-        # 2. Summarize with Gemini
-        with st.spinner(f"🧠 Analyzing data with Gemini..."):
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel(model_name)
+        # 2. Summarize with AI
+        with st.spinner(f"🧠 Analyzing data with {provider}..."):
             
-            prompt = f"""
+            system_prompt = f"""
             You are an expert pharmaceutical researcher. 
             Detailed Research Request for Drug: {drug_name}
 
@@ -86,9 +85,26 @@ def research_drug(drug_name, api_key, model_name):
 
             Keep it concise but informative for a medical professional or researcher.
             """
+
+            if provider == "Google Gemini":
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel(model_name)
+                response = model.generate_content(system_prompt)
+                return response.text
             
-            response = model.generate_content(prompt)
-            return response.text
+            elif provider == "xAI Grok":
+                client = OpenAI(
+                    api_key=api_key,
+                    base_url="https://api.x.ai/v1",
+                )
+                response = client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {"role": "system", "content": "You are a helpful pharmaceutical researcher."},
+                        {"role": "user", "content": system_prompt},
+                    ]
+                )
+                return response.choices[0].message.content
 
     except Exception as e:
         return f"An error occurred: {str(e)}"
@@ -96,53 +112,43 @@ def research_drug(drug_name, api_key, model_name):
 # --- Sidebar: History & Config ---
 st.sidebar.markdown('<div class="sidebar-header">⚙️ Configuration</div>', unsafe_allow_html=True)
 
+# Provider Selection
+provider = st.sidebar.radio("Select AI Provider", ["Google Gemini", "xAI Grok"])
+
 # Model Selection
-model_options = [
-    "gemini-2.0-flash-exp",
-    "gemini-2.0-flash",
-    "gemini-2.5-flash",
-    "gemini-flash-latest",
-    "gemini-1.5-flash-latest" # Fallback mapping
-]
-selected_model = st.sidebar.selectbox("Select AI Model", model_options, index=0)
+if provider == "Google Gemini":
+    model_options = [
+        "gemini-2.0-flash-exp",
+        "gemini-2.0-flash",
+        "gemini-2.5-flash",
+        "gemini-flash-latest",
+    ]
+else: # Grok
+    model_options = [
+        "grok-2-latest",
+        "grok-2-1212",
+        "grok-2-mini",
+        "grok-beta",
+    ]
 
-st.sidebar.markdown('<div class="sidebar-header">🔬 Research History</div>', unsafe_allow_html=True)
-
-if "history" not in st.session_state:
-    st.session_state.history = []
-
-# Display history in reverse order
-for i, item in enumerate(reversed(st.session_state.history)):
-    with st.sidebar.expander(f"📅 {item['timestamp']} - {item['drug']}"):
-        st.write(item['summary'][:150] + "...")
-
-st.sidebar.divider()
-st.sidebar.info("Built with Streamlit & Gemini 1.5 Flash")
-
-# --- Main Interface ---
-st.title("💊 AutoPharma AI Research Agent")
-st.markdown("### Intelligent Drug Information Summarizer")
-
-col1, col2 = st.columns([3, 1])
-with col1:
-    drug_input = st.text_input("Enter Drug Name", placeholder="e.g., Atorvastatin, Pembrolizumab...")
-
-with col2:
-    st.write("") # Spacing
-    st.write("") 
-    research_btn = st.button("🚀 Start Research")
+selected_model = st.sidebar.selectbox("Select Model", model_options, index=0)
 
 # API Key Handling
 try:
-    api_key = st.secrets["GOOGLE_API_KEY"]
+    if provider == "Google Gemini":
+        api_key = st.secrets["GOOGLE_API_KEY"]
+    else:
+        api_key = st.secrets["XAI_API_KEY"]
 except (FileNotFoundError, KeyError):
-    api_key = st.sidebar.text_input("Enter Google API Key", type="password")
+    api_key_env = "GOOGLE_API_KEY" if provider == "Google Gemini" else "XAI_API_KEY"
+    api_key = st.sidebar.text_input(f"Enter {provider} API Key", type="password")
     if not api_key:
-        st.warning("Please add your GOOGLE_API_KEY to .streamlit/secrets.toml or the sidebar to proceed.")
+        st.warning(f"Please add your {api_key_env} to .streamlit/secrets.toml or the sidebar to proceed.")
+
 
 # --- Execution ---
 if research_btn and drug_input and api_key:
-    summary = research_drug(drug_input, api_key, selected_model)
+    summary = research_drug(drug_input, api_key, provider, selected_model)
     
     # Store in history
     timestamp = time.strftime("%H:%M:%S")

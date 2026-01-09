@@ -13,12 +13,13 @@ The core feature of AutoPharma AI is generating research summaries for specific 
 
 ### Steps:
 1.  **Enter Drug Name**: In the main text input field labeled **"Enter Drug Name"**, type the generic or brand name of the medication (e.g., `Lisinopril`, `Humira`, `Panadol`).
-2.  **Select Model (Optional)**:
-    -   In the sidebar (left panel), look for the dropdown menu **"Select AI Model"**.
-    -   **Default**: `gemini-2.0-flash-exp` (Recommended for free tier).
-    -   **Alternatives**: If you encounter quota limits, try `gemini-2.0-flash` or `gemini-2.5-flash`.
-3.  **Start Research**: Click the green **"🚀 Start Research"** button.
-4.  **Wait for Processing**: The app will display a spinner while it:
+2.  **Select Provider (Optional)**:
+    -   In the sidebar, choose between **Google Gemini** (Default) and **xAI Grok**.
+    -   *Note*: To use Grok, you must have an `XAI_API_KEY` configured.
+3.  **Select Model (Optional)**:
+    -   Based on your provider, select a model (e.g., `gemini-2.0-flash` or `grok-2-latest`).
+4.  **Start Research**: Click the green **"🚀 Start Research"** button.
+5.  **Wait for Processing**: The app will display a spinner while it:
     -   🔍 Searches the web via DuckDuckGo.
     -   🧠 Analyzes the results with Google Gemini.
 
