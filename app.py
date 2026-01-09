@@ -145,14 +145,48 @@ except (FileNotFoundError, KeyError):
     if not api_key:
         st.warning(f"Please add your {api_key_env} to .streamlit/secrets.toml or the sidebar to proceed.")
 
+st.sidebar.markdown('<div class="sidebar-header">🔬 Research History</div>', unsafe_allow_html=True)
+
+if "history" not in st.session_state:
+    st.session_state.history = []
+
+# Display history in reverse order
+for i, item in enumerate(reversed(st.session_state.history)):
+    with st.sidebar.expander(f"📅 {item['timestamp']} - {item['drug']}"):
+        st.write(item['summary'][:150] + "...")
+
+if st.sidebar.button("🗑️ Clear History"):
+    st.session_state.history = []
+    st.rerun()
+
+st.sidebar.divider()
+st.sidebar.info("Built with Streamlit & Gemini / Grok")
+
+# --- Main Interface ---
+st.title("💊 AutoPharma AI Research Agent")
+st.markdown("### Intelligent Drug Information Summarizer")
+
+col1, col2 = st.columns([3, 1])
+with col1:
+    drug_input = st.text_input("Enter Drug Name", placeholder="e.g., Atorvastatin, Pembrolizumab...")
+
+with col2:
+    st.write("") # Spacing
+    st.write("") 
+    research_btn = st.button("🚀 Start Research")
+
 
 # --- Execution ---
 if research_btn and drug_input and api_key:
     summary = research_drug(drug_input, api_key, provider, selected_model)
     
-    # Store in history
-    timestamp = time.strftime("%H:%M:%S")
-    st.session_state.history.append({"drug": drug_input, "summary": summary, "timestamp": timestamp})
+    # Check for errors before saving to history
+    is_error = any(phrase in summary for phrase in ["⚠️", "An error occurred", "No search results"])
+    
+    if not is_error:
+        # Store in history
+        timestamp = time.strftime("%H:%M:%S")
+        st.session_state.history.append({"drug": drug_input, "summary": summary, "timestamp": timestamp})
     
     # Display Result
     st.markdown("---")

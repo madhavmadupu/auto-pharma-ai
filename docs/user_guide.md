@@ -36,7 +36,8 @@ Once processing is complete, a structured report appears containing:
 
 The sidebar automatically saves your session's search history.
 -   **View History**: Expand any item in the **"🔬 Research History"** section to see a snippet of previous reports.
--   **Note**: History is cleared when you refresh the page.
+-   **Clear History**: Click the **"🗑️ Clear History"** button in the sidebar to remove all saved items.
+-   **Note**: History is cleared when you refresh the page. Valid research results are saved; errors are automatically excluded to keep your history clean.
 
 ## ❓ Troubleshooting
 
